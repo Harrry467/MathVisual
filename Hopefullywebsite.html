@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Math Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.11.0/math.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+        
+        #container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        #canvas-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        #sidebar {
+            width: 384px;
+            background: rgba(17, 24, 39, 0.95);
+            backdrop-filter: blur(12px);
+            border-left: 1px solid #374151;
+            padding: 1rem;
+            overflow-y: auto;
+            color: white;
+        }
+        
+        #sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        #sidebar::-webkit-scrollbar-track {
+            background: #1F2937;
+        }
+        
+        #sidebar::-webkit-scrollbar-thumb {
+            background: #4B5563;
+            border-radius: 4px;
+        }
+        
+        #sidebar::-webkit-scrollbar-thumb:hover {
+            background: #6B7280;
+        }
+        
+        h1 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1rem;
+            background: linear-gradient(to right, #8B5CF6, #EC4899);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .section {
+            margin-bottom: 1rem;
+        }
+        
+        .dimension-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 0.875rem;
+        }
+        
+        .btn-dimension {
+            background: #374151;
+            color: #D1D5DB;
+        }
+        
+        .btn-dimension:hover {
+            background: #4B5563;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-dimension.active {
+            background: linear-gradient(to right, #8B5CF6, #EC4899);
+            color: white;
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+        
+        .btn-primary {
+            background: #10B981;
+            color: white;
+            width: 100%;
+        }
+        
+        .btn-primary:hover {
+            background: #059669;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-danger {
+            background: #EF4444;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #DC2626;
+            transform: translateY(-1px);
+        }
+        
+        .btn-remove {
+            padding: 0.5rem 0.75rem;
+            background: #EF4444;
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .btn-remove:hover {
+            background: #DC2626;
+        }
+        
+        .equation-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        
+        .color-indicator {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            flex-shrink: 0;
+            box-shadow: 0 0 8px currentColor;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 0.5rem 0.75rem;
+            background: #1F2937;
+            color: white;
+            border: 1px solid #4B5563;
+            border-radius: 0.5rem;
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #8B5CF6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #374151;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(to right, #8B5CF6, #EC4899);
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        input[type="range"]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(to right, #8B5CF6, #EC4899);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        input[type="checkbox"] {
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            font-size: 0.875rem;
+        }
+        
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            margin-bottom: 0.75rem;
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            transition: background 0.2s;
+        }
+        
+        .checkbox-label:hover {
+            background: rgba(75, 85, 99, 0.3);
+        }
+        
+        .time-control {
+            background: #1F2937;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #374151;
+        }
+        
+        .intersections-box {
+            background: #1F2937;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid #374151;
+        }
+        
+        .intersection-list {
+            max-height: 160px;
+            overflow-y: auto;
+            font-size: 0.875rem;
+        }
+        
+        .intersection-item {
+            background: #374151;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+            font-family: 'Courier New', monospace;
+            color: #D1D5DB;
+        }
+        
+        .help-box {
+            background: #1F2937;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            color: #9CA3AF;
+            border: 1px solid #374151;
+        }
+        
+        .help-box div {
+            margin-bottom: 0.25rem;
+        }
+        
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #9CA3AF;
+            margin-top: 0.25rem;
+        }
+        
+        .value-tag {
+            color: #8B5CF6;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="canvas-container"></div>
+        <div id="sidebar">
+            <h1>Math Visualizer</h1>
+            
+            <!-- Dimension Selector -->
+            <div class="section">
+                <label>Dimension:</label>
+                <div class="dimension-buttons">
+                    <button class="btn btn-dimension" onclick="setDimension('2D')">2D</button>
+                    <button class="btn btn-dimension active" onclick="setDimension('3D')">3D</button>
+                    <button class="btn btn-dimension" onclick="setDimension('4D')">4D</button>
+                    <button class="btn btn-dimension" onclick="setDimension('5D')">5D</button>
+                </div>
+            </div>
+            
+            <!-- Equations -->
+            <div class="section">
+                <label>Equations <span id="equation-label">(z =)</span>:</label>
+                <div id="equations-container"></div>
+            </div>
+            
+            <!-- Color Dimension -->
+            <div class="section" id="color-dimension-section" style="display: none;">
+                <label>Color (5th dim) =</label>
+                <input type="text" id="color-dimension" placeholder="x + y" oninput="updateGraph()">
+            </div>
+            
+            <!-- Time Controls -->
+            <div class="time-control" id="time-control" style="display: none;">
+                <label>Time (t): <span class="value-tag" id="time-value">0.00</span></label>
+                <input type="range" id="time-slider" min="0" max="12.566" step="0.1" value="0" oninput="updateTimeValue()">
+                <button class="btn btn-primary" id="animate-btn" onclick="toggleAnimation()" style="margin-top: 0.75rem;">▶ Animate</button>
+            </div>
+            
+            <!-- Display Options -->
+            <div class="section">
+                <h3>Display Options</h3>
+                
+                <div style="margin-bottom: 1rem;">
+                    <label>Resolution: <span class="value-tag" id="resolution-label">50×50×50</span></label>
+                    <input type="range" id="resolution" min="10" max="200" step="10" value="50" oninput="updateResolution()">
+                    <div class="slider-labels">
+                        <span>Low (Fast)</span>
+                        <span>High (Detailed)</span>
+                    </div>
+                </div>
+                
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-axes" checked onchange="updateGraph()">
+                    <span>Show Axes</span>
+                </label>
+                
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-values" onchange="updateGraph()">
+                    <span>Show Axis Values</span>
+                </label>
+                
+                <label class="checkbox-label">
+                    <input type="checkbox" id="show-intersections" onchange="findAndDisplayIntersections()">
+                    <span>Show Intersections</span>
+                </label>
+                
+                <label class="checkbox-label">
+                    <input type="checkbox" id="use-degrees" onchange="updateGraph()">
+                    <span>Use Degrees (instead of Radians)</span>
+                </label>
+            </div>
+            
+            <!-- Intersections -->
+            <div class="intersections-box" id="intersections-box" style="display: none;">
+                <h3>Intersections (<span id="intersection-count">0</span>)</h3>
+                <div class="intersection-list" id="intersection-list"></div>
+            </div>
+            
+            <!-- Help -->
+            <div class="help-box">
+                <div style="font-weight: bold; color: white; margin-bottom: 0.5rem;">Controls:</div>
+                <div>🖱️ Left drag: Rotate view</div>
+                <div>🖱️ Right drag: Pan camera</div>
+                <div>🖱️ Scroll: Zoom in/out</div>
+                <div>🖱️ Middle drag: Pan camera</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        const colors = ['#4dabf7', '#ff6b6b', '#51cf66', '#ffd43b', '#ff66d9', '#66d9ff'];
+        let scene, camera, renderer;
+        let equations = [
+            { equation: 'sin(x) + cos(y)', color: colors[0] },
+            { equation: '', color: colors[1] }
+        ];
+        let dimension = '3D';
+        let is2D = false;
+        let timeEnabled = false;
+        let timeValue = 0;
+        let isAnimating = false;
+        let animationId = null;
+        let resolution = 50;
+        
+        // Camera controls
+        let isDragging = false;
+        let isPanning = false;
+        let previousMousePosition = { x: 0, y: 0 };
+        let cameraRotation = { theta: Math.PI / 4, phi: Math.PI / 4 };
+        let cameraDistance = 12;
+        let cameraTarget = new THREE.Vector3(0, 0, 0);
+        
+        // Initialize Three.js
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x1a1a2e);
+            
+            camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            updateCameraPosition();
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+            
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const pointLight1 = new THREE.PointLight(0xffffff, 1.2);
+            pointLight1.position.set(10, 10, 10);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0xffffff, 0.6);
+            pointLight2.position.set(-10, -10, -10);
+            scene.add(pointLight2);
+            
+            const pointLight3 = new THREE.PointLight(0x4dabf7, 0.4);
+            pointLight3.position.set(0, 10, 0);
+            scene.add(pointLight3);
+            
+            // Grid
+            const gridHelper = new THREE.GridHelper(20, 20, 0x3a3a6e, 0x2a2a4e);
+            scene.add(gridHelper);
+            
+            setupControls();
+            
+            window.addEventListener('resize', onWindowResize);
+            
+            updateGraph();
+            animate();
+        }
+        
+        function updateCameraPosition() {
+            const x = cameraDistance * Math.sin(cameraRotation.phi) * Math.cos(cameraRotation.theta);
+            const y = cameraDistance * Math.cos(cameraRotation.phi);
+            const z = cameraDistance * Math.sin(cameraRotation.phi) * Math.sin(cameraRotation.theta);
+            
+            camera.position.set(
+                cameraTarget.x + x,
+                cameraTarget.y + y,
+                cameraTarget.z + z
+            );
+            camera.lookAt(cameraTarget);
+        }
+        
+        function setupControls() {
+            const canvas = renderer.domElement;
+            
+            canvas.addEventListener('mousedown', (e) => {
+                if (e.button === 0) {
+                    isDragging = true;
+                } else if (e.button === 1 || e.button === 2) {
+                    isPanning = true;
+                    e.preventDefault();
+                }
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                const deltaX = e.clientX - previousMousePosition.x;
+                const deltaY = e.clientY - previousMousePosition.y;
+                
+                if (isDragging) {
+                    cameraRotation.theta -= deltaX * 0.01;
+                    cameraRotation.phi = Math.max(0.1, Math.min(Math.PI - 0.1, cameraRotation.phi - deltaY * 0.01));
+                    updateCameraPosition();
+                } else if (isPanning) {
+                    const panSpeed = 0.01;
+                    const right = new THREE.Vector3();
+                    const up = new THREE.Vector3(0, 1, 0);
+                    
+                    camera.getWorldDirection(right);
+                    right.cross(up).normalize();
+                    
+                    cameraTarget.add(right.multiplyScalar(-deltaX * panSpeed));
+                    cameraTarget.y += deltaY * panSpeed;
+                    
+                    updateCameraPosition();
+                }
+                
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                isDragging = false;
+                isPanning = false;
+            });
+            
+            canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+            
+            canvas.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const delta = e.deltaY * 0.001;
+                cameraDistance = Math.max(2, Math.min(50, cameraDistance * (1 + delta)));
+                updateCameraPosition();
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+                isDragging = false;
+                isPanning = false;
+            });
+        }
+        
+        function onWindowResize() {
+            const container = document.getElementById('canvas-container');
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        
+        function setDimension(dim) {
+            dimension = dim;
+            is2D = dim === '2D';
+            
+            // Update UI
+            document.querySelectorAll('.btn-dimension').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.textContent === dim) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // Reset camera
+            cameraRotation = { theta: Math.PI / 4, phi: Math.PI / 4 };
+            cameraDistance = 12;
+            cameraTarget = new THREE.Vector3(0, 0, 0);
+            
+            // Update equations
+            if (dim === '2D') {
+                timeEnabled = false;
+                equations = [
+                    { equation: 'sin(x)', color: colors[0] },
+                    { equation: '', color: colors[1] }
+                ];
+                document.getElementById('equation-label').textContent = '(y =)';
+                document.getElementById('time-control').style.display = 'none';
+                document.getElementById('color-dimension-section').style.display = 'none';
+                cameraRotation.phi = Math.PI / 2;
+            } else if (dim === '3D') {
+                timeEnabled = false;
+                equations = [
+                    { equation: 'sin(x) + cos(y)', color: colors[0] },
+                    { equation: '', color: colors[1] }
+                ];
+                document.getElementById('equation-label').textContent = '(z =)';
+                document.getElementById('time-control').style.display = 'none';
+                document.getElementById('color-dimension-section').style.display = 'none';
+            } else if (dim === '4D') {
+                timeEnabled = true;
+                equations = [
+                    { equation: 'sin(x + t) + cos(y + t)', color: colors[0] },
+                    { equation: '', color: colors[1] }
+                ];
+                document.getElementById('equation-label').textContent = '(z =)';
+                document.getElementById('time-control').style.display = 'block';
+                document.getElementById('color-dimension-section').style.display = 'none';
+            } else if (dim === '5D') {
+                timeEnabled = true;
+                equations = [
+                    { equation: 'sin(x + t) + cos(y + t)', color: colors[0] },
+                    { equation: '', color: colors[1] }
+                ];
+                document.getElementById('equation-label').textContent = '(z =)';
+                document.getElementById('time-control').style.display = 'block';
+                document.getElementById('color-dimension-section').style.display = 'block';
+                document.getElementById('color-dimension').value = 'x + y';
+            }
+            
+            updateCameraPosition();
+            updateResolution();
+            renderEquationInputs();
+            updateGraph();
+        }
+        
+        function renderEquationInputs() {
+            const container = document.getElementById('equations-container');
+            container.innerHTML = '';
+            
+            equations.forEach((eq, idx) => {
+                const row = document.createElement('div');
+                row.className = 'equation-row';
+                
+                const colorDiv = document.createElement('div');
+                colorDiv.className = 'color-indicator';
+                colorDiv.style.backgroundColor = eq.color;
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.value = eq.equation;
+                input.placeholder = is2D ? 'sin(x)' : 'sin(x) + cos(y)';
+                input.oninput = () => updateEquation(idx, input.value);
+                
+                row.appendChild(colorDiv);
+                row.appendChild(input);
+                
+                if (equations.length > 2 && eq.equation.trim() !== '') {
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'btn-remove';
+                    removeBtn.textContent = '✕';
+                    removeBtn.onclick = () => removeEquation(idx);
+                    row.appendChild(removeBtn);
+                }
+                
+                container.appendChild(row);
+            });
+        }
+        
+        function updateEquation(index, value) {
+            equations[index].equation = value;
+            
+            const filledEquations = equations.filter(eq => eq.equation.trim() !== '');
+            if (filledEquations.length === equations.length && equations.length < 6) {
+                equations.push({ equation: '', color: colors[equations.length % colors.length] });
+                renderEquationInputs();
+            }
+            
+            updateGraph();
+            if (document.getElementById('show-intersections').checked) {
+                findAndDisplayIntersections();
+            }
+        }
+        
+        function removeEquation(index) {
+            equations = equations.filter((_, i) => i !== index);
+            if (equations.length < 2) {
+                equations.push({ equation: '', color: colors[equations.length % colors.length] });
+            }
+            renderEquationInputs();
+            updateGraph();
+            if (document.getElementById('show-intersections').checked) {
+                findAndDisplayIntersections();
+            }
+        }
+        
+        function updateTimeValue() {
+            timeValue = parseFloat(document.getElementById('time-slider').value);
+            document.getElementById('time-value').textContent = timeValue.toFixed(2);
+            updateGraph();
+            if (document.getElementById('show-intersections').checked) {
+                findAndDisplayIntersections();
+            }
+        }
+        
+        function toggleAnimation() {
+            isAnimating = !isAnimating;
+            const btn = document.getElementById('animate-btn');
+            
+            if (isAnimating) {
+                btn.textContent = '⏸ Stop Animation';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-danger');
+                animateTime();
+            } else {
+                btn.textContent = '▶ Animate';
+                btn.classList.remove('btn-danger');
+                btn.classList.add('btn-primary');
+                if (animationId) cancelAnimationFrame(animationId);
+            }
+        }
+        
+        function animateTime() {
+            if (!isAnimating) return;
+            
+            timeValue = (timeValue + 0.05) % (Math.PI * 4);
+            document.getElementById('time-slider').value = timeValue;
+            document.getElementById('time-value').textContent = timeValue.toFixed(2);
+            updateGraph();
+            if (document.getElementById('show-intersections').checked) {
+                findAndDisplayIntersections();
+            }
+            
+            animationId = requestAnimationFrame(animateTime);
+        }
+        
+        function updateResolution() {
+            resolution = parseInt(document.getElementById('resolution').value);
+            const label = is2D ? 
+                `${resolution * 2}×${resolution * 2}` : 
+                `${resolution}×${resolution}×${resolution}`;
+            document.getElementById('resolution-label').textContent = label;
+            updateGraph();
+        }
+        
+        function updateGraph() {
+            // Clear previous graph objects
+            while(scene.children.length > 0) { 
+                scene.remove(scene.children[0]); 
+            }
+            
+            // Re-add lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+            
+            const pointLight1 = new THREE.PointLight(0xffffff, 1.2);
+            pointLight1.position.set(10, 10, 10);
+            scene.add(pointLight1);
+            
+            const pointLight2 = new THREE.PointLight(0xffffff, 0.6);
+            pointLight2.position.set(-10, -10, -10);
+            scene.add(pointLight2);
+            
+            const pointLight3 = new THREE.PointLight(0x4dabf7, 0.4);
+            pointLight3.position.set(0, 10, 0);
+            scene.add(pointLight3);
+            
+            const gridHelper = new THREE.GridHelper(20, 20, 0x3a3a6e, 0x2a2a4e);
+            if (is2D) {
+                gridHelper.rotation.x = Math.PI / 2;
+            }
+            scene.add(gridHelper);
+            
+            renderAxes();
+            renderAxisLabels();
+            renderEquations();
+        }
+        
+        function renderAxes() {
+            const showAxes = document.getElementById('show-axes').checked;
+            if (!showAxes) return;
+            
+            // X axis - Red
+            const xMaterial = new THREE.LineBasicMaterial({ color: 0xff6b6b, linewidth: 2 });
+            const xGeometry = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(-10, 0, 0),
+                new THREE.Vector3(10, 0, 0)
+            ]);
+            scene.add(new THREE.Line(xGeometry, xMaterial));
+            
+            if (is2D) {
+                // Y axis - Green (height)
+                const yMaterial = new THREE.LineBasicMaterial({ color: 0x51cf66, linewidth: 2 });
+                const yGeometry = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(0, -10, 0),
+                    new THREE.Vector3(0, 10, 0)
+                ]);
+                scene.add(new THREE.Line(yGeometry, yMaterial));
+            } else {
+                // Y axis - Green (depth)
+                const yMaterial = new THREE.LineBasicMaterial({ color: 0x51cf66, linewidth: 2 });
+                const yGeometry = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(0, 0, -10),
+                    new THREE.Vector3(0, 0, 10)
+                ]);
+                scene.add(new THREE.Line(yGeometry, yMaterial));
+                
+                // Z axis - Blue (height)
+                const zMaterial = new THREE.LineBasicMaterial({ color: 0x4dabf7, linewidth: 2 });
+                const zGeometry = new THREE.BufferGeometry().setFromPoints([
+                    new THREE.Vector3(0, -10, 0),
+                    new THREE.Vector3(0, 10, 0)
+                ]);
+                scene.add(new THREE.Line(zGeometry, zMaterial));
+            }
+        }
+        
+        function createTextSprite(text, color) {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = 256;
+            canvas.height = 128;
+            
+            context.fillStyle = color;
+            context.font = 'Bold 48px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'middle';
+            context.fillText(text, 128, 64);
+            
+            const texture = new THREE.CanvasTexture(canvas);
+            const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+            const sprite = new THREE.Sprite(spriteMaterial);
+            sprite.scale.set(0.5, 0.25, 1);
+            
+            return sprite;
+        }
+        
+        function renderAxisLabels() {
+            const showValues = document.getElementById('show-values').checked;
+            if (!showValues) return;
+            
+            const positions = [-4, -2, 0, 2, 4];
+            
+            // X axis labels
+            positions.forEach(pos => {
+                const sprite = createTextSprite(pos.toString(), '#ff6b6b');
+                sprite.position.set(pos, -0.5, 0);
+                scene.add(sprite);
+            });
+            
+            if (is2D) {
+                // Y axis labels for 2D
+                positions.forEach(pos => {
+                    const sprite = createTextSprite(pos.toString(), '#51cf66');
+                    sprite.position.set(-0.7, pos, 0);
+                    scene.add(sprite);
+                });
+            } else {
+                // Y axis labels for 3D (depth)
+                positions.forEach(pos => {
+                    const sprite = createTextSprite(pos.toString(), '#51cf66');
+                    sprite.position.set(0, -0.5, pos);
+                    scene.add(sprite);
+                });
+                
+                // Z axis labels for 3D (height)
+                positions.forEach(pos => {
+                    const sprite = createTextSprite(pos.toString(), '#4dabf7');
+                    sprite.position.set(-0.7, pos, 0);
+                    scene.add(sprite);
+                });
+            }
+        }
+        
+        function renderEquations() {
+            const filledEquations = equations.filter(eq => eq.equation.trim() !== '');
+            const range = 5;
+            const res = is2D ? Math.min(resolution * 2, 200) : resolution;
+            
+            filledEquations.forEach(eq => {
+                try {
+                    const parsedEq = math.compile(eq.equation);
+                    
+                    if (is2D) {
+                        const points = [];
+                        for (let i = 0; i < res; i++) {
+                            const x = (i / res) * range * 2 - range;
+                            const scope = { x, t: timeValue };
+                            const y = parsedEq.evaluate(scope);
+                            if (isFinite(y)) {
+                                points.push(new THREE.Vector3(x, y, 0));
+                            }
+                        }
+                        
+                        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+                        const material = new THREE.LineBasicMaterial({ 
+                            color: new THREE.Color(eq.color),
+                            linewidth: 3
+                        });
+                        scene.add(new THREE.Line(geometry, material));
+                    } else {
+                        for (let i = 0; i < res; i++) {
+                            for (let j = 0; j < res; j++) {
+                                const x = (i / res) * range * 2 - range;
+                                const y = (j / res) * range * 2 - range;
+                                
+                                const scope = { x, y, t: timeValue };
+                                const z = parsedEq.evaluate(scope);
+                                
+                                if (!isFinite(z)) continue;
+                                
+                                const geometry = new THREE.SphereGeometry(0.05, 8, 8);
+                                const material = new THREE.MeshStandardMaterial({ 
+                                    color: new THREE.Color(eq.color),
+                                    metalness: 0.3,
+                                    roughness: 0.4
+                                });
+                                const sphere = new THREE.Mesh(geometry, material);
+                                sphere.position.set(x, z, y);
+                                scene.add(sphere);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error('Equation error:', e);
+                }
+            });
+        }
+        
+        function findAndDisplayIntersections() {
+            const showIntersections = document.getElementById('show-intersections').checked;
+            const intersectionBox = document.getElementById('intersections-box');
+            
+            if (!showIntersections) {
+                intersectionBox.style.display = 'none';
+                updateGraph();
+                return;
+            }
+            
+            intersectionBox.style.display = 'block';
+            
+            const filledEquations = equations.filter(eq => eq.equation.trim() !== '');
+            if (filledEquations.length < 2) {
+                document.getElementById('intersection-count').textContent = '0';
+                document.getElementById('intersection-list').innerHTML = '<div class="intersection-item">Need at least 2 equations</div>';
+                updateGraph();
+                return;
+            }
+            
+            const intersections = [];
+            const tolerance = 0.2;
+            const range = 5;
+            
+            try {
+                for (let i = 0; i < filledEquations.length; i++) {
+                    for (let j = i + 1; j < filledEquations.length; j++) {
+                        const eq1 = math.compile(filledEquations[i].equation);
+                        const eq2 = math.compile(filledEquations[j].equation);
+                        
+                        if (is2D) {
+                            for (let x = -range; x <= range; x += 0.2) {
+                                const scope = { x, t: timeValue };
+                                const y1 = eq1.evaluate(scope);
+                                const y2 = eq2.evaluate(scope);
+                                
+                                if (isFinite(y1) && isFinite(y2) && Math.abs(y1 - y2) < tolerance) {
+                                    intersections.push({
+                                        x: x,
+                                        y: y1,
+                                        z: null,
+                                        equations: [i, j]
+                                    });
+                                }
+                            }
+                        } else {
+                            for (let x = -range; x <= range; x += 0.5) {
+                                for (let y = -range; y <= range; y += 0.5) {
+                                    const scope = { x, y, t: timeValue };
+                                    const z1 = eq1.evaluate(scope);
+                                    const z2 = eq2.evaluate(scope);
+                                    
+                                    if (isFinite(z1) && isFinite(z2) && Math.abs(z1 - z2) < tolerance) {
+                                        intersections.push({
+                                            x: x,
+                                            y: y,
+                                            z: z1,
+                                            equations: [i, j]
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Intersection error:', e);
+            }
+            
+            // Limit to first 20 intersections
+            const limitedIntersections = intersections.slice(0, 20);
+            
+            // Update UI
+            document.getElementById('intersection-count').textContent = limitedIntersections.length;
+            
+            const listContainer = document.getElementById('intersection-list');
+            listContainer.innerHTML = '';
+            
+            if (limitedIntersections.length === 0) {
+                listContainer.innerHTML = '<div class="intersection-item">No intersections found</div>';
+            } else {
+                limitedIntersections.forEach(point => {
+                    const div = document.createElement('div');
+                    div.className = 'intersection-item';
+                    
+                    if (is2D) {
+                        div.textContent = `x: ${point.x.toFixed(2)}, y: ${point.y.toFixed(2)}`;
+                    } else {
+                        div.textContent = `x: ${point.x.toFixed(2)}, y: ${point.y.toFixed(2)}, z: ${point.z.toFixed(2)}`;
+                    }
+                    
+                    if (timeEnabled) {
+                        div.textContent += `, t: ${timeValue.toFixed(2)}`;
+                    }
+                    
+                    listContainer.appendChild(div);
+                });
+            }
+            
+            // Draw intersection points on graph
+            updateGraph();
+            limitedIntersections.forEach(point => {
+                const geometry = new THREE.SphereGeometry(0.15, 16, 16);
+                const material = new THREE.MeshStandardMaterial({ 
+                    color: 0xff0066,
+                    emissive: 0xff0066,
+                    emissiveIntensity: 0.5,
+                    metalness: 0.8,
+                    roughness: 0.2
+                });
+                const sphere = new THREE.Mesh(geometry, material);
+                
+                if (is2D) {
+                    sphere.position.set(point.x, point.y, 0);
+                } else {
+                    sphere.position.set(point.x, point.z, point.y);
+                }
+                
+                scene.add(sphere);
+            });
+        }
+        
+        // Initialize
+        window.onload = () => {
+            init();
+            renderEquationInputs();
+        };
+	</script>
+</body>
+</html>
